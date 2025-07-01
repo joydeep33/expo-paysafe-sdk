@@ -1,0 +1,33 @@
+{
+  "name": "expo-paysafe-sdk",
+  "version": "0.1.0",
+  "description": "Custom Expo plugin and native module for Paysafe integration in Android/iOS apps.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "keywords": [
+    "expo",
+    "react-native",
+    "paysafe",
+    "plugin",
+    "payments"
+  ],
+  "files": [
+    "android",
+    "ios",
+    "plugin",
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joydeep33/expo-paysafe-sdk"
+  },
+  "author": "Joydeep Nath <joydeepnath33@gmail.com>",
+  "license": "MIT",
+  "peerDependencies": {
+    "expo": ">=48.0.0",
+    "react-native": ">=0.72.0"
+  },
+  "dependencies": {
+    "expo-modules-core": "^2.0.0"
+  }
+}
