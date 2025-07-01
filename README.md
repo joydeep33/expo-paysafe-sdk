@@ -1,52 +1,116 @@
+// README.md
+
 # expo-paysafe-sdk
 
-A custom Expo plugin and native module to integrate the Paysafe SDK in Android and iOS apps using Expo.
+Custom Expo config plugin + native module for integrating Paysafe card payments with 3D Secure support in React Native Expo apps.
 
-## 🚀 Features
-
-- Native support for Paysafe payment flows in React Native Expo
-- Custom config plugin to automatically link SDK dependencies
-- Works with `expo prebuild` via `withPaysafe` plugin
-- Supports both Android and iOS
+---
 
 ## 📦 Installation
 
-```sh
+```bash
+# Install your custom package (replace with actual npm name)
 npm install expo-paysafe-sdk
+
+# Or if using Yarn
+yarn add expo-paysafe-sdk
 ```
 
-Add it to your `app.config.js` or `app.config.ts`:
+## ⚙️ Add the Config Plugin to `app.config.js`
 
-```ts
+```js
+// app.config.js
 import withPaysafe from "expo-paysafe-sdk/plugin/withPaysafe";
 
-export default {
-  name: "your-app",
-  plugins: [withPaysafe],
-};
+export default withPaysafe({
+  name: "YourApp",
+  slug: "your-app",
+  // other config...
+});
 ```
 
-## 🧩 Usage
+## 💳 Usage (React Native)
 
 ```ts
 import { initiateCheckout } from "expo-paysafe-sdk";
 
-await initiateCheckout({
-  amount: 1000,
+const token = await initiateCheckout({
+  apiKey: "<YOUR_API_KEY>",
+  accountId: "<YOUR_ACCOUNT_ID>",
+  amount: 100.0, // in currency units
   currencyCode: "USD",
-  customerId: "user-id",
-  requestBillingAddress: true,
-  environment: "TEST",
+  environment: "TEST", // or 'LIVE'
 });
+
+// send `token` to your backend to complete payment
 ```
 
-> The native modules currently return a simulated token. You'll need to connect the actual Paysafe SDK in native code.
+---
 
-## 📲 Supported Platforms
+## 🖥️ Backend Integration
 
-- ✅ Android
-- ✅ iOS
+Once you receive the `paymentHandleToken` from the mobile SDK, make an API call to Paysafe's servers:
 
-## 📝 License
+### 🔐 `POST /cardpayments/v1/accounts/{accountId}/auths`
 
-MIT
+**Example (Node.js):**
+
+```ts
+import axios from "axios";
+
+const authPaysafe = async (paymentHandleToken: string) => {
+  const result = await axios.post(
+    "https://api.test.paysafe.com/cardpayments/v1/accounts/<ACCOUNT_ID>/auths",
+    {
+      merchantRefNum: "ref-" + Date.now(),
+      amount: 10000, // amount in minor units (e.g. 100.00 USD → 10000)
+      currencyCode: "USD",
+      paymentHandleToken,
+    },
+    {
+      auth: {
+        username: "<API_KEY_USERNAME>",
+        password: "<API_KEY_PASSWORD>",
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  return result.data;
+};
+```
+
+### 📘 Paysafe Test Card for 3DS
+
+Use this for testing:
+
+- Card Number: `4000 0000 0000 1091`
+- Expiry: `12/30`
+- CVV: `123`
+
+---
+
+## 🧪 Test & Build
+
+Use `expo run:ios` or `expo run:android` after plugin is applied.
+
+---
+
+## 🧩 Supported Features
+
+- ✅ Card Payments
+- ✅ 3D Secure (3DS)
+- ✅ React Native + Expo SDK
+- ✅ Expo Config Plugin
+
+---
+
+## 🔒 Disclaimer
+
+This module helps bridge native Paysafe SDK in Expo apps. You are responsible for securely handling API credentials and compliance.
+
+---
+
+MIT License © 2025

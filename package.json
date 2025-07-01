@@ -1,6 +1,6 @@
 {
   "name": "expo-paysafe-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Custom Expo plugin and native module for Paysafe integration in Android/iOS apps.",
   "main": "src/index.ts",
   "types": "src/index.ts",
