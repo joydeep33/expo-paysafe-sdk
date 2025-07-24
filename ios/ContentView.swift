@@ -78,7 +78,23 @@ struct ContentView: View {
             VStack(spacing: 16) {
                 HStack {
                     Button(action: {
-                        // Close button action
+                        DispatchQueue.main.async {
+                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                               let window = windowScene.windows.first,
+                               let rootViewController = window.rootViewController {
+                                
+                                // Find the presented view controller (modal)
+                                var currentVC = rootViewController
+                                while let presentedVC = currentVC.presentedViewController {
+                                    currentVC = presentedVC
+                                }
+                                
+                                // Dismiss the current modal
+                                currentVC.dismiss(animated: true) {
+                                    NSLog("[iOS] Payment form closed successfully!")
+                                }
+                            }
+                        }
                     }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 18, weight: .medium))
@@ -114,11 +130,9 @@ struct ContentView: View {
                     
                     Spacer()
                     
-                    TextField("Amount", text: $amountText)
+                    Text("$\(amountText)")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.black)
-                        .multilineTextAlignment(.center)
-                        .keyboardType(.decimalPad)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .background(
@@ -126,15 +140,6 @@ struct ContentView: View {
                                 .fill(Color.white)
                         )
                         .frame(width: 120)
-                        .overlay(
-                            HStack {
-                                Text("$")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.black)
-                                    .padding(.leading, 20)
-                                Spacer()
-                            }
-                        )
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -245,14 +250,13 @@ struct ContentView: View {
                     // Payment Button
                     VStack(spacing: 16) {
                         Button(action: {
-                            if let amount = Float(amountText) {
-                                // Pass billing address to view model
-                                viewModel.setBillingAddress(savedBillingAddress)
-                                // Use the configured account ID from the SDK initialization
-                                let config = PaysafeWrappeApp.shared.getCurrentConfiguration()
-                                let configuredAccountId = config["accountId"] as? String ?? ""
-                                viewModel.placeOrder(accountId: configuredAccountId, amount: Int(amount * 100))
-                            }
+                            // Pass billing address to view model
+                            viewModel.setBillingAddress(savedBillingAddress)
+                            // Use the configured account ID and amount from the SDK initialization
+                            let config = PaysafeWrappeApp.shared.getCurrentConfiguration()
+                            let configuredAccountId = config["accountId"] as? String ?? ""
+                            let configuredAmount = config["amount"] as? Int ?? 0
+                            viewModel.placeOrder(accountId: configuredAccountId, amount: configuredAmount)
                         }) {
                             HStack {
                                 Image(systemName: "lock.fill")
@@ -346,7 +350,7 @@ struct ContentView: View {
                 cardExpiryView: cardExpiryView,
                 cardCVVView: cardCVVView,
                 amountProvider: {
-                    return Int((Float(amountText) ?? 0.0) * 100)
+                    return configuredAmount
                 }
             )
             print("[iOS] configureCardForm call completed")

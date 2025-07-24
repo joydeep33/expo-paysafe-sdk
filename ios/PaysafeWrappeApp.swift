@@ -3,21 +3,13 @@ import PaysafePaymentsSDK
 
 // Billing Address struct for Paysafe SDK integration
 struct BillingAddress {
-    /// Billing address id
     let id: String = UUID().uuidString
-    /// Billing address nickname
     let nickName: String
-    /// Billing address street
     let street: String
-    /// Billing address city
     let city: String
-    /// Billing address state
     let state: String
-    /// Billing address country
     let country: String
-    /// Billing address zip code
     let zip: String
-
     var billingAddressString: String {
         "\(nickName)\n\(street)\n\(city), \(state), \(zip)"
     }
@@ -131,12 +123,10 @@ extension BillingAddress {
         shared.currentPhone = phone
         shared.currentThreeDSMerchantUrl = threeDSMerchantUrl
         
-        NSLog("[iOS] Configuration stored - API Key: \(apiKey.prefix(20))..., Account ID: \(accountId), Amount: \(amount), Currency: \(currencyCode)")
-        
         // Create beautiful Paysafe theme
         let paysafeTheme = createPaysafeTheme()
         
-        // Set up the Paysafe SDK with beautiful theme
+        // Set up the Paysafe SDK 
         PaysafeSDK.shared.setup(
             apiKey: apiKey,
             environment: environment.uppercased() == "PROD" ? .production : .test,
@@ -144,9 +134,7 @@ extension BillingAddress {
         ) { result in
             switch result {
                     case .success:
-            print("[iOS] Paysafe SDK setup succeeded with environment: \(environment)")
-            NSLog("[iOS] About to update ViewModel configuration")
-            // Pass the stored configuration to the view model
+            print("[iOS] Paysafe SDK setup succeeded ")
             shared.viewModel.updateConfiguration(
                 apiKey: apiKey,
                 accountId: accountId,
@@ -175,8 +163,8 @@ extension BillingAddress {
                 apiKey: apiKey,
                 accountId: accountId,
                 amount: shared.currentAmount ?? 0,
-                currencyCode: shared.currentCurrencyCode ?? "USD",
-                environment: shared.currentEnvironment ?? "TEST",
+                currencyCode: shared.currentCurrencyCode ?? "",
+                environment: shared.currentEnvironment ?? "",
                 merchantRefNum: shared.currentMerchantRefNum,
                 singleUseCustomerToken: shared.currentSingleUseCustomerToken,
                 email: shared.currentEmail,
@@ -271,14 +259,12 @@ extension BillingAddress {
         configLastName = lastName
         configPhone = phone
         configThreeDSMerchantUrl = threeDSMerchantUrl
-        
-        NSLog("[iOS] ViewModel configuration updated with amount: \(amount), currency: \(currencyCode), merchantRefNum: \(merchantRefNum ?? "nil")")
     }
     
     // Method to set billing address
     public func setBillingAddress(_ billingAddress: BillingAddressData?) {
         currentBillingAddress = billingAddress
-        NSLog("[iOS] Billing address updated: \(billingAddress?.addressLine1 ?? "nil")")
+        NSLog("[iOS] Billing address updated")
     }
 
     public func configureCardForm(
@@ -291,13 +277,7 @@ extension BillingAddress {
     ) {
         // Use stored configuration or fallback to parameters
         let finalAccountId = configAccountId ?? accountId
-        let finalCurrencyCode = configCurrencyCode ?? "USD"
-        
-        NSLog("[iOS] CONFIGURING CARD FORM:")
-        NSLog("[iOS] - Account ID: \(finalAccountId)")
-        NSLog("[iOS] - Currency: \(finalCurrencyCode)")
-        NSLog("[iOS] Using global Paysafe theme for consistent styling")
-        NSLog("[iOS] Starting PSCardForm.initialize...")
+        let finalCurrencyCode = configCurrencyCode ?? ""
         
         PSCardForm.initialize(
             currencyCode: finalCurrencyCode,
@@ -352,18 +332,20 @@ extension BillingAddress {
         paymentStatus = "Processing payment..."
         NSLog("[iOS] Payment status updated to: '\(paymentStatus)'")
 
-        // Use stored configuration instead of hardcoded values
         let finalAmount = configAmount ?? amount
-        let finalCurrencyCode = configCurrencyCode ?? "USD"
+        let finalCurrencyCode = configCurrencyCode ?? ""
         let finalAccountId = configAccountId ?? accountId
-        let finalMerchantRefNum = configMerchantRefNum ?? "deposit_\(Int(Date().timeIntervalSince1970))"
-        let finalThreeDSMerchantUrl = configThreeDSMerchantUrl ?? "https://api.qa.paysafe.com/checkout/v2/index.html#/desktop"
+        let finalMerchantRefNum = configMerchantRefNum ?? ""
         
-        NSLog("[iOS] PAYMENT CONFIGURATION:")
-        NSLog("[iOS] - Amount: \(finalAmount)")
-        NSLog("[iOS] - Currency: \(finalCurrencyCode)")
-        NSLog("[iOS] - Account ID: \(finalAccountId)")
-        NSLog("[iOS] - Merchant Ref: \(finalMerchantRefNum)")
+        // Get 3DS merchant URL from configuration
+        let finalThreeDSMerchantUrl = configThreeDSMerchantUrl ?? ""
+        
+        // Validate URL format
+        guard let url = URL(string: finalThreeDSMerchantUrl), url.scheme != nil else {
+            NSLog("[iOS] ERROR: Invalid 3DS merchant URL format: \(finalThreeDSMerchantUrl)")
+            paymentStatus = "Payment failed: Invalid 3DS merchant URL format"
+            return
+        }
         
         // Create billing details from saved address
         let billingDetails: BillingDetails?
@@ -378,11 +360,12 @@ extension BillingAddress {
                 zip: address.zipCode
             )
             billingDetails = billingAddress.toBillingDetails()
-            NSLog("[iOS] Using billing address: \(address.addressLine1), \(address.city), \(address.state)")
         } else {
             billingDetails = nil
             NSLog("[iOS] No billing address provided")
         }
+        
+        let threeDS = ThreeDS(merchantUrl: finalThreeDSMerchantUrl, process: true)
         
         // Create tokenize options
         let options: PSCardTokenizeOptions
@@ -396,7 +379,7 @@ extension BillingAddress {
                 merchantRefNum: finalMerchantRefNum,
                 billingDetails: billingDetails,
                 accountId: finalAccountId,
-                threeDS: ThreeDS(merchantUrl: finalThreeDSMerchantUrl, process: true),
+                threeDS: threeDS,
                 singleUseCustomerToken: customerToken
             )
         } else {
@@ -408,18 +391,16 @@ extension BillingAddress {
                 merchantRefNum: finalMerchantRefNum,
                 billingDetails: billingDetails,
                 accountId: finalAccountId,
-                threeDS: ThreeDS(merchantUrl: finalThreeDSMerchantUrl, process: true)
+                threeDS: threeDS
             )
         }
-        
-        NSLog("[iOS] Using tokenize options - Amount: \(finalAmount), Currency: \(finalCurrencyCode), MerchantRefNum: \(finalMerchantRefNum), AccountId: \(finalAccountId)")
-        
+
         cardForm.tokenize(using: options) { [weak self] result in
             DispatchQueue.main.async {
                 NSLog("[iOS] Tokenization callback received")
                 switch result {
                 case .success(let token):
-                    self?.paymentStatus = "Payment successful! Token: \(token)"
+                    self?.paymentStatus = "Payment successful"
                     NSLog("[iOS] Payment status updated to: '\(self?.paymentStatus ?? "nil")'")
                 case .failure(let error):
                     self?.paymentStatus = "Payment failed: \(error.localizedDescription)"

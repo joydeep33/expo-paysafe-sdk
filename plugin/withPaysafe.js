@@ -1,13 +1,8 @@
 const {
     withAndroidManifest,
     withAppBuildGradle,
-    withMainApplication,
     withProjectBuildGradle,
     withDangerousMod,
-    withInfoPlist,
-    withEntitlementsPlist,
-    withXcodeProject,
-    AndroidConfig
 } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
@@ -543,7 +538,7 @@ function withPaysafeIOSFiles(config) {
                         if (fileName === 'PaysafeWrappeApp.swift') {
                             fileContent = fileContent
                                 .replace('@main\n', '')
-                                .replace(': App', '')
+                                .replace(/class PaysafeWrappeApp: App/g, 'class PaysafeWrappeApp: NSObject')
                                 .replace(/public var body: some Scene \{[\s\S]*?\n    \}/, '')
                                 .replace('@StateObject private var viewModel = PaysafeViewModel()', '');
 
